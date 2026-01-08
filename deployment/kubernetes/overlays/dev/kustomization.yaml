@@ -1,0 +1,79 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: fabric-rti-mcp-dev
+
+# Base resources
+bases:
+  - ../../base
+
+# Suffix for resources
+nameSuffix: -dev
+
+# Common labels for dev environment
+commonLabels:
+  environment: dev
+  app.kubernetes.io/instance: fabric-rti-mcp-dev
+
+# Images configuration for dev
+images:
+  - name: fabric-rti-mcp
+    newName: your-acr.azurecr.io/fabric-rti-mcp
+    newTag: dev-latest
+
+# Replicas configuration for dev (lower replicas)
+replicas:
+  - name: fabric-rti-mcp
+    count: 1
+
+# ConfigMap overrides for dev environment
+configMapGenerator:
+  - name: fabric-rti-mcp-config
+    behavior: merge
+    literals:
+      - FABRIC_RTI_STATELESS_HTTP=true
+      - USE_OBO_FLOW=false
+
+# Patches for dev environment
+patches:
+  # Reduce resources for dev
+  - target:
+      kind: Deployment
+      name: fabric-rti-mcp
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 128Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 100m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 512Mi
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 500m
+
+  # Update ingress host for dev
+  - target:
+      kind: Ingress
+      name: fabric-rti-mcp
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: fabric-rti-mcp-dev.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: fabric-rti-mcp-dev.example.com
+
+  # Adjust HPA for dev
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: fabric-rti-mcp
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3

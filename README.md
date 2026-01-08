@@ -5,7 +5,7 @@
 A comprehensive Model Context Protocol (MCP) server implementation for [Microsoft Fabric Real-Time Intelligence (RTI)](https://aka.ms/fabricrti).
 This server enables AI agents to interact with Fabric RTI services by providing tools through the MCP interface, allowing for seamless data querying, analysis, and streaming capabilities.
 
-> [!NOTE]  
+> [!NOTE]
 > This project is in Public Preview and implementation may significantly change prior to General Availability.
 
 ### 🔍 How It Works
@@ -123,10 +123,10 @@ The Fabric RTI MCP Server acts as a bridge between AI agents and Microsoft Fabri
    * [💫 Stable release](https://code.visualstudio.com/download)
    * [🔮 Insiders release](https://code.visualstudio.com/insiders)
 2. Install the [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) and [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extensions
-3. Install `uv`  
+3. Install `uv`
 ```ps
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```  
+```
 or, check here for [other install options](https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2)
 
 4. Open VS Code in an empty folder
@@ -166,12 +166,12 @@ The process should end with the below settings in your `settings.json` or your `
 
 > **Note**: All environment variables are optional. The `KUSTO_SERVICE_URI` and `KUSTO_SERVICE_DEFAULT_DB` provide default cluster and database settings. The `AZ_OPENAI_EMBEDDING_ENDPOINT` is only needed for semantic search functionality in the `kusto_get_shots` tool.
 
-### 🔧 Manual Install (Install from source)  
+### 🔧 Manual Install (Install from source)
 
 1. Make sure you have Python 3.10+ installed properly and added to your PATH.
 2. Clone the repository
 3. Install the dependencies (`pip install .` or `uv tool install .`)
-4. Add the settings below into your vscode `settings.json` or your `mcp.json` file. 
+4. Add the settings below into your vscode `settings.json` or your `mcp.json` file.
 5. Modify the path to match the repo location on your machine.
 6. Modify the cluster uri in the settings to match your cluster.
 7. Modify the cluster default database in the settings to match your database.
@@ -201,6 +201,67 @@ The process should end with the below settings in your `settings.json` or your `
 }
 ```
 
+## 🚢 Deploy to Azure Kubernetes Service (AKS)
+
+The Fabric RTI MCP Server can be deployed to Azure Kubernetes Service for production workloads with enterprise-grade features:
+
+- **🔐 Multiple Auth Methods**: Workload Identity (recommended) or Service Principal
+- **📈 Auto-scaling**: Horizontal Pod Autoscaler with CPU/memory metrics
+- **🛡️ Security**: Non-root containers, security contexts, network policies
+- **🔄 High Availability**: Multi-replica deployments with pod disruption budgets
+- **📊 Monitoring**: Health checks, readiness/liveness probes, Prometheus integration
+- **🌐 Ingress**: NGINX or Azure Application Gateway with TLS support
+
+### Quick Start (5 minutes)
+
+```bash
+# 1. Set environment variables
+export ACR_NAME="your-acr-name"
+export RESOURCE_GROUP="fabric-rti-mcp-rg"
+export AKS_CLUSTER_NAME="fabric-rti-mcp-aks"
+
+# 2. Build and push image
+./deployment/scripts/build-and-push.sh
+
+# 3. Setup workload identity (recommended auth method)
+./deployment/scripts/setup-workload-identity.sh
+
+# 4. Deploy to development
+kubectl apply -k deployment/kubernetes/overlays/dev
+```
+
+### Documentation
+
+- **[📘 Full Deployment Guide](deployment/README.md)** - Comprehensive AKS deployment documentation
+- **[⚡ Quick Start Guide](deployment/QUICKSTART.md)** - Get started in 5 minutes
+- **[🔧 CI/CD Setup](deployment/CICD.md)** - GitHub Actions workflow configuration
+- **[📁 Structure](deployment/STRUCTURE.md)** - Deployment directory overview
+
+### Supported Auth Methods
+
+| Method | Security | Complexity | Status |
+|--------|----------|------------|--------|
+| **Workload Identity** | ⭐⭐⭐⭐⭐ | Medium | ✅ Recommended |
+| **Service Principal** | ⭐⭐⭐ | Low | ✅ Supported |
+
+### Environment Overlays
+
+Three pre-configured environments using Kustomize:
+
+- **Development**: 1 replica, lower resources, local testing
+- **Staging**: 2 replicas, workload identity enabled, pre-production validation
+- **Production**: 3+ replicas (auto-scaling), high availability, full monitoring
+
+### Prerequisites
+
+- Azure subscription with AKS cluster
+- Azure Container Registry (ACR)
+- kubectl and Azure CLI installed
+- Docker (for building images)
+
+For detailed instructions, see the [deployment README](deployment/README.md).
+```
+
 ## 🐛 Debugging the MCP Server locally
 Assuming you have python installed and the repo cloned:
 
@@ -214,8 +275,8 @@ pip install -e ".[dev]"
 Follow the [Manual Install](#🔧-manual-install-install-from-source) instructions.
 
 ### Attach the debugger
-Use the `Python: Attach` configuration in your `launch.json` to attach to the running server. 
-Once VS Code picks up the server and starts it, navigate to its output: 
+Use the `Python: Attach` configuration in your `launch.json` to attach to the running server.
+Once VS Code picks up the server and starts it, navigate to its output:
 1. Open command palette (Ctrl+Shift+P) and run the command `MCP: List Servers`
 2. Navigate to `fabric-rti-mcp` and select `Show Output`
 3. Pick up the process ID (PID) of the server from the output
@@ -248,7 +309,7 @@ python eventstream_test/vscode_mcp_client.py "get fabric api base url"
 
 The VS Code client includes:
 - 🔐 **Interactive authentication** - Browser-based Microsoft sign-in
-- 🗣️ **Natural language prompts** - English commands for MCP operations  
+- 🗣️ **Natural language prompts** - English commands for MCP operations
 - ⚙️ **API configuration** - Runtime control of Fabric API endpoints
 - 📊 **JSON output** - Formatted results for analysis
 
@@ -275,7 +336,7 @@ None - the server will work with default settings for demo purposes.
 
 ### Embedding Endpoint Configuration
 
-The `AZ_OPENAI_EMBEDDING_ENDPOINT` is used by the semantic search functionality (e.g., `kusto_get_shots` function) to find similar query examples. 
+The `AZ_OPENAI_EMBEDDING_ENDPOINT` is used by the semantic search functionality (e.g., `kusto_get_shots` function) to find similar query examples.
 
 **Format Requirements:**
 ```
@@ -351,7 +412,7 @@ This flow is typically used in OAuth scenarios where a gateway like Azure API Ma
 To support this setup, your Microsoft Entra App must be configured to use Federated Credentials following the official guide: https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation. This enables the app to exchange tokens (OBO).
 Additionally, the Entra app must be granted Azure Data Explorer API permissions to successfully acquire an OBO token with the Kusto audience.
 
-### Remote Deployment 
+### Remote Deployment
 The MCP server can be deployed using the method of your choice. For example, you can follow the guide at https://github.com/Azure-Samples/mcp-sdk-functions-hosting-python/blob/main/ExistingServer.md to deploy the MCP server to an Azure Function App.
 
 ## 🛡️ Security Note
@@ -380,7 +441,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 ## 📚 Documentation
 
 - **[Usage Guide](./USAGE_GUIDE.md)** - Comprehensive examples and scenarios
-- **[Architecture Guide](./ARCHITECTURE.md)** - Technical architecture and design patterns  
+- **[Architecture Guide](./ARCHITECTURE.md)** - Technical architecture and design patterns
 - **[Async Pattern Explanation](./ASYNC_PATTERN_EXPLANATION.md)** - Details on async/sync integration
 - **[Changelog](./CHANGELOG.md)** - Release history and breaking changes
 - **[Project Assessment](./POST_CLEANUP_ASSESSMENT.md)** - Current project health status
@@ -392,8 +453,8 @@ The software may collect information about you and your use of the software and 
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
+trademarks or logos is subject to and must follow
 [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.

@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fabric-rti-mcp
+  namespace: fabric-rti-mcp
+  labels:
+    app.kubernetes.io/name: fabric-rti-mcp
+    app.kubernetes.io/component: server
+    app.kubernetes.io/version: "0.2.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fabric-rti-mcp
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fabric-rti-mcp
+        app.kubernetes.io/component: server
+        app.kubernetes.io/version: "0.2.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/health"
+    spec:
+      # Service account for workload identity
+      serviceAccountName: fabric-rti-mcp
+
+      # Security context for the pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+      - name: mcp-server
+        image: fabric-rti-mcp:latest  # Replace with your ACR/registry
+        imagePullPolicy: Always
+
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+
+        # Environment variables from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: fabric-rti-mcp-config
+        - secretRef:
+            name: fabric-rti-mcp-secrets
+            optional: true
+
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+
+        # Readiness probe
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+
+        # Startup probe for slow starting containers
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+
+        # Security context for the container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+      # Tolerations for node taints (optional)
+      tolerations:
+      - key: "fabric-rti-mcp"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+
+      # Node affinity (optional, for dedicated node pools)
+      # affinity:
+      #   nodeAffinity:
+      #     preferredDuringSchedulingIgnoredDuringExecution:
+      #     - weight: 100
+      #       preference:
+      #         matchExpressions:
+      #         - key: workload
+      #           operator: In
+      #           values:
+      #           - fabric-rti-mcp

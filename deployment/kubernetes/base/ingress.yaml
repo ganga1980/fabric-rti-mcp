@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fabric-rti-mcp
+  namespace: fabric-rti-mcp
+  labels:
+    app.kubernetes.io/name: fabric-rti-mcp
+    app.kubernetes.io/component: ingress
+  annotations:
+    # NGINX Ingress Controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Enable CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+
+    # Rate limiting (optional)
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+
+    # Connection and timeout settings
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+
+    # TLS/SSL settings
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Uncomment if using cert-manager
+spec:
+  ingressClassName: nginx  # Or "azure-application-gateway" for Azure App Gateway
+
+  # TLS configuration
+  tls:
+  - hosts:
+    - fabric-rti-mcp.example.com  # Replace with your domain
+    secretName: fabric-rti-mcp-tls
+
+  rules:
+  - host: fabric-rti-mcp.example.com  # Replace with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: fabric-rti-mcp
+            port:
+              number: 80
