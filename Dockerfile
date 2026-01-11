@@ -1,8 +1,13 @@
 # Multi-stage Dockerfile for Fabric RTI MCP Server
 # Optimized for AKS deployment with security best practices
 
+ARG APP_VERSION=0.2.0
+
 # Build stage
-FROM python:3.10-slim as builder
+FROM python:3.10-slim AS builder
+
+ARG APP_VERSION
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_MICROSOFT_FABRIC_RTI_MCP=${APP_VERSION}
 
 # Install build dependencies
 RUN apt-get update && \
@@ -28,10 +33,12 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel setuptools_scm && 
 # Runtime stage
 FROM python:3.10-slim
 
+ARG APP_VERSION
+
 # Add metadata labels
 LABEL maintainer="Microsoft Fabric RTI MCP Team"
 LABEL description="MCP Server for Microsoft Fabric Real-Time Intelligence"
-LABEL version="0.2.0"
+LABEL version=${APP_VERSION}
 
 # Install runtime dependencies only
 RUN apt-get update && \
