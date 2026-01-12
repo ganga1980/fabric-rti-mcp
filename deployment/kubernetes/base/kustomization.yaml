@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: fabric-rti-mcp
 
 resources:
-  - namespace.yaml
   - serviceaccount.yaml
   - configmap.yaml
   - secret.yaml
@@ -15,9 +14,10 @@ resources:
   - pdb.yaml
 
 # Common labels applied to all resources
-commonLabels:
-  app.kubernetes.io/managed-by: kustomize
-  app.kubernetes.io/part-of: fabric-rti-mcp
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: fabric-rti-mcp
 
 # Images configuration
 images:

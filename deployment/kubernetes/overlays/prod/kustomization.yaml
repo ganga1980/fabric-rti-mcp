@@ -4,16 +4,15 @@ kind: Kustomization
 namespace: fabric-rti-mcp-prod
 
 # Base resources
-bases:
+resources:
+  - namespace.yaml
   - ../../base
 
-# Suffix for resources
-nameSuffix: -prod
-
 # Common labels for production environment
-commonLabels:
-  environment: production
-  app.kubernetes.io/instance: fabric-rti-mcp-prod
+labels:
+  - pairs:
+      environment: production
+      app.kubernetes.io/instance: fabric-rti-mcp-prod
 
 # Images configuration for production
 images:

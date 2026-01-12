@@ -4,16 +4,14 @@ kind: Kustomization
 namespace: fabric-rti-mcp-dev
 
 # Base resources
-bases:
+resources:
   - ../../base
 
-# Suffix for resources
-nameSuffix: -dev
-
 # Common labels for dev environment
-commonLabels:
-  environment: dev
-  app.kubernetes.io/instance: fabric-rti-mcp-dev
+labels:
+  - pairs:
+      environment: dev
+      app.kubernetes.io/instance: fabric-rti-mcp-dev
 
 # Images configuration for dev
 images:

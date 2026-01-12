@@ -2,7 +2,6 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: fabric-rti-mcp
-  namespace: fabric-rti-mcp
   labels:
     app.kubernetes.io/name: fabric-rti-mcp
     app.kubernetes.io/component: hpa

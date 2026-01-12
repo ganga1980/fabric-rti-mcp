@@ -2,7 +2,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: fabric-rti-mcp
-  namespace: fabric-rti-mcp
   labels:
     app.kubernetes.io/name: fabric-rti-mcp
     app.kubernetes.io/component: ingress

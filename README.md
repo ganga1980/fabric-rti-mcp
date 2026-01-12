@@ -219,6 +219,10 @@ The Fabric RTI MCP Server can be deployed to Azure Kubernetes Service for produc
 export ACR_NAME="your-acr-name"
 export RESOURCE_GROUP="fabric-rti-mcp-rg"
 export AKS_CLUSTER_NAME="fabric-rti-mcp-aks"
+export LOCATION="westus2"
+export MANAGED_IDENTITY_NAME="fabric-rti-mcp-uai"
+export NAMESPACE="fabric-rti-mcp"
+export SERVICE_ACCOUNT_NAME="fabric-rti-mcp-sa"
 
 # 2. Build and push image
 ./deployment/scripts/build-and-push.sh

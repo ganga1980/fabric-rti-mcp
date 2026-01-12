@@ -4,16 +4,15 @@ kind: Kustomization
 namespace: fabric-rti-mcp-staging
 
 # Base resources
-bases:
+resources:
+  - namespace.yaml
   - ../../base
 
-# Suffix for resources
-nameSuffix: -staging
-
 # Common labels for staging environment
-commonLabels:
-  environment: staging
-  app.kubernetes.io/instance: fabric-rti-mcp-staging
+labels:
+  - pairs:
+      environment: staging
+      app.kubernetes.io/instance: fabric-rti-mcp-staging
 
 # Images configuration for staging
 images:

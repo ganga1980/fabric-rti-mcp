@@ -2,7 +2,6 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: fabric-rti-mcp
-  namespace: fabric-rti-mcp
   labels:
     app.kubernetes.io/name: fabric-rti-mcp
     app.kubernetes.io/component: pdb
