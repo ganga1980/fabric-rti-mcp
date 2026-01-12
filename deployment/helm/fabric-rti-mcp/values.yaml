@@ -1,0 +1,276 @@
+# Default values for fabric-rti-mcp
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of replicas for the deployment
+replicaCount: 2
+
+# -- Image configuration
+image:
+  # -- Image repository
+  repository: fabric-rti-mcp
+  # -- Image pull policy
+  pullPolicy: Always
+  # -- Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# -- Override the name of the chart
+nameOverride: ""
+# -- Override the full name of the chart
+fullnameOverride: ""
+
+# -- Service account configuration
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account (e.g., for workload identity)
+  annotations: {}
+    # azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000000"
+  # -- The name of the service account to use
+  name: ""
+
+# -- Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+  prometheus.io/path: "/health"
+
+# -- Pod labels
+podLabels: {}
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+    - ALL
+
+# -- Service configuration
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 80
+  # -- Target port (container port)
+  targetPort: 3000
+  # -- Session affinity
+  sessionAffinity: None
+
+# -- Ingress configuration
+ingress:
+  # -- Enable ingress
+  enabled: true
+  # -- Ingress class name
+  className: "nginx"
+  # -- Ingress annotations
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  # -- Ingress hosts configuration
+  hosts:
+    - host: fabric-rti-mcp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- TLS configuration
+  tls:
+    - secretName: fabric-rti-mcp-tls
+      hosts:
+        - fabric-rti-mcp.example.com
+
+# -- Resource requests and limits
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# -- Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# -- Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# -- Startup probe configuration
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+    scheme: HTTP
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30
+  successThreshold: 1
+
+# -- Horizontal Pod Autoscaler configuration
+autoscaling:
+  # -- Enable HPA
+  enabled: true
+  # -- Minimum number of replicas
+  minReplicas: 2
+  # -- Maximum number of replicas
+  maxReplicas: 10
+  # -- Target CPU utilization percentage
+  targetCPUUtilizationPercentage: 70
+  # -- Target memory utilization percentage
+  targetMemoryUtilizationPercentage: 80
+  # -- Scale down behavior
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+      selectPolicy: Max
+
+# -- Pod Disruption Budget configuration
+podDisruptionBudget:
+  # -- Enable PDB
+  enabled: true
+  # -- Minimum number of pods that must be available
+  minAvailable: 1
+  # -- Maximum number of pods that can be unavailable (alternative to minAvailable)
+  # maxUnavailable: 1
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations:
+  - key: "fabric-rti-mcp"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+# -- Affinity and anti-affinity
+affinity: {}
+
+# -- Update strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# -- Application configuration
+config:
+  # -- Transport configuration
+  transport:
+    type: "http"
+    host: "0.0.0.0"
+    port: 3000
+    path: "/mcp"
+    stateless: true
+
+  # -- Fabric API configuration
+  fabric:
+    apiBase: "https://api.fabric.microsoft.com/v1"
+    baseUrl: "https://fabric.microsoft.com"
+
+  # -- Authentication method: "obo", "servicePrincipal", or "workloadIdentity"
+  auth:
+    method: "workloadIdentity"
+    # -- Enable OBO flow (for backwards compatibility)
+    useOboFlow: false
+
+  # -- AI Foundry compatibility
+  aiFoudry:
+    compatibilitySchema: false
+
+  # -- Kusto default configuration (optional)
+  kusto: {}
+    # serviceUri: "https://help.kusto.windows.net/"
+    # defaultDb: "Samples"
+
+  # -- Additional environment variables
+  extraEnv: {}
+
+# -- Secrets configuration
+secrets:
+  # -- Create secret resource
+  create: true
+  # -- Secret data for OBO authentication
+  obo: {}
+    # tenantId: ""
+    # entraAppClientId: ""
+    # userManagedIdentityClientId: ""
+    # kustoAudience: "https://kusto.kusto.windows.net"
+
+  # -- Secret data for Service Principal authentication
+  servicePrincipal: {}
+    # clientId: ""
+    # clientSecret: ""
+    # tenantId: ""
+
+  # -- Additional secret data
+  extraSecrets: {}
+
+# -- Workload identity configuration (Azure AKS)
+workloadIdentity:
+  # -- Enable workload identity
+  enabled: false
+  # -- Client ID of the user-assigned managed identity
+  clientId: ""
+  # -- Add workload identity label to pods
+  labelPods: false
+
+# -- Environment label (dev, staging, production)
+environment: "production"

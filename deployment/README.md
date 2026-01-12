@@ -1,6 +1,53 @@
-# Fabric RTI MCP Server - AKS Deployment Guide
+# Fabric RTI MCP Server - Deployment Guide
 
 This guide provides comprehensive instructions for deploying the Fabric RTI MCP Server to Azure Kubernetes Service (AKS) with various authentication methods.
+
+## Deployment Options
+
+We offer **two deployment approaches**:
+
+### 🎯 Helm Charts (Recommended)
+**Easy configuration management with environment-specific values**
+- ✅ Simple value overrides without editing files
+- ✅ Built-in rollback capabilities
+- ✅ Version tracking and release management
+- ✅ Better environment management
+- 📚 **[Get Started with Helm →](./helm/QUICKSTART.md)**
+
+### 📋 Kustomize (Original)
+**Patch-based overlay approach**
+- Traditional Kubernetes YAML files
+- Base + environment overlays
+- Good for simple scenarios
+- 📚 **[Continue with Kustomize →](#kustomize-deployment)**
+
+## 🆕 Helm Chart Deployment
+
+For the best experience with environment management and easy configuration, we recommend using Helm charts:
+
+```bash
+# Quick install for development
+helm install fabric-rti-mcp ./helm/fabric-rti-mcp \
+  --namespace fabric-rti-mcp-dev \
+  --create-namespace \
+  --values ./helm/fabric-rti-mcp/values-dev.yaml
+
+# Quick install for production
+helm install fabric-rti-mcp ./helm/fabric-rti-mcp \
+  --namespace fabric-rti-mcp-prod \
+  --create-namespace \
+  --values ./helm/fabric-rti-mcp/values-prod.yaml
+```
+
+**📖 Complete Helm Documentation:**
+- [Quick Start Guide](./helm/QUICKSTART.md)
+- [Full Documentation](./helm/README.md)
+- [Migration from Kustomize](./helm/MIGRATION.md)
+- [Comparison Guide](./helm/COMPARISON.md)
+
+---
+
+## Kustomize Deployment
 
 ## Table of Contents
 

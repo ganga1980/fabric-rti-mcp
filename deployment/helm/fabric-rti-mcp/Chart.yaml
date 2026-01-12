@@ -1,0 +1,14 @@
+apiVersion: v2
+name: fabric-rti-mcp
+description: A Helm chart for deploying Fabric RTI MCP Server
+type: application
+version: 0.2.0
+appVersion: "0.2.0"
+keywords:
+  - fabric
+  - mcp
+  - microsoft
+  - azure
+maintainers:
+  - name: Fabric RTI Team
+icon: https://fabric.microsoft.com/favicon.ico

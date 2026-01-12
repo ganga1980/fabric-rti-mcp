@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fabric-rti-mcp.configMapName" . }}
+  labels:
+    {{- include "fabric-rti-mcp.labels" . | nindent 4 }}
+data:
+  # Transport configuration
+  FABRIC_RTI_TRANSPORT: {{ .Values.config.transport.type | quote }}
+  FABRIC_RTI_HTTP_HOST: {{ .Values.config.transport.host | quote }}
+  FABRIC_RTI_HTTP_PORT: {{ .Values.config.transport.port | quote }}
+  FABRIC_RTI_HTTP_PATH: {{ .Values.config.transport.path | quote }}
+  FABRIC_RTI_STATELESS_HTTP: {{ .Values.config.transport.stateless | quote }}
+
+  # Fabric API configuration
+  FABRIC_API_BASE: {{ .Values.config.fabric.apiBase | quote }}
+  FABRIC_BASE_URL: {{ .Values.config.fabric.baseUrl | quote }}
+
+  # Authentication configuration
+  {{- include "fabric-rti-mcp.authEnvVars" . | nindent 2 }}
+
+  # AI Foundry compatibility
+  FABRIC_RTI_AI_FOUNDRY_COMPATIBILITY_SCHEMA: {{ .Values.config.aiFoudry.compatibilitySchema | quote }}
+
+  {{- if and .Values.config.kusto (hasKey .Values.config.kusto "serviceUri") }}
+  # Kusto default configuration
+  KUSTO_SERVICE_URI: {{ .Values.config.kusto.serviceUri | quote }}
+  {{- end }}
+  {{- if and .Values.config.kusto (hasKey .Values.config.kusto "defaultDb") }}
+  KUSTO_SERVICE_DEFAULT_DB: {{ .Values.config.kusto.defaultDb | quote }}
+  {{- end }}
+
+  {{- with .Values.config.extraEnv }}
+  # Additional environment variables
+  {{- range $key, $value := . }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}

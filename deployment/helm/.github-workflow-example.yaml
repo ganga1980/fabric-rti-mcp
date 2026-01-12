@@ -1,0 +1,186 @@
+name: Deploy Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  ACR_NAME: your-acr
+  IMAGE_NAME: fabric-rti-mcp
+  CHART_PATH: ./deployment/helm/fabric-rti-mcp
+
+jobs:
+  lint-and-test:
+    name: Lint and Test Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Lint Helm chart
+        run: |
+          helm lint ${{ env.CHART_PATH }}
+          helm lint ${{ env.CHART_PATH }} --values ${{ env.CHART_PATH }}/values-dev.yaml
+          helm lint ${{ env.CHART_PATH }} --values ${{ env.CHART_PATH }}/values-staging.yaml
+          helm lint ${{ env.CHART_PATH }} --values ${{ env.CHART_PATH }}/values-prod.yaml
+
+      - name: Template Helm chart
+        run: |
+          helm template test ${{ env.CHART_PATH }} > /tmp/template-output.yaml
+          kubectl apply --dry-run=client -f /tmp/template-output.yaml
+
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --name ${{ secrets.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Deploy to Dev
+        run: |
+          helm upgrade --install fabric-rti-mcp ${{ env.CHART_PATH }} \
+            --namespace fabric-rti-mcp-dev \
+            --create-namespace \
+            --values ${{ env.CHART_PATH }}/values-dev.yaml \
+            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
+            --set image.tag=dev-${{ github.sha }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/fabric-rti-mcp -n fabric-rti-mcp-dev
+          kubectl get pods -n fabric-rti-mcp-dev
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --name ${{ secrets.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Deploy to Staging
+        run: |
+          helm upgrade --install fabric-rti-mcp ${{ env.CHART_PATH }} \
+            --namespace fabric-rti-mcp-staging \
+            --create-namespace \
+            --values ${{ env.CHART_PATH }}/values-staging.yaml \
+            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
+            --set image.tag=staging-${{ github.sha }} \
+            --set workloadIdentity.clientId=${{ secrets.STAGING_UMI_CLIENT_ID }} \
+            --set serviceAccount.annotations."azure\.workload\.identity/client-id"=${{ secrets.STAGING_UMI_CLIENT_ID }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/fabric-rti-mcp -n fabric-rti-mcp-staging
+          kubectl get pods -n fabric-rti-mcp-staging
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} \
+            --name ${{ secrets.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.13.0'
+
+      - name: Deploy to Production
+        run: |
+          helm upgrade --install fabric-rti-mcp ${{ env.CHART_PATH }} \
+            --namespace fabric-rti-mcp-prod \
+            --create-namespace \
+            --values ${{ env.CHART_PATH }}/values-prod.yaml \
+            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ steps.get_version.outputs.VERSION }} \
+            --set workloadIdentity.clientId=${{ secrets.PROD_UMI_CLIENT_ID }} \
+            --set serviceAccount.annotations."azure\.workload\.identity/client-id"=${{ secrets.PROD_UMI_CLIENT_ID }} \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/fabric-rti-mcp -n fabric-rti-mcp-prod
+          kubectl get pods -n fabric-rti-mcp-prod
+
+      - name: Run smoke tests
+        run: |
+          export INGRESS_HOST=$(kubectl get ingress fabric-rti-mcp -n fabric-rti-mcp-prod -o jsonpath='{.spec.rules[0].host}')
+          curl -f https://$INGRESS_HOST/health || exit 1
+          echo "Smoke test passed!"

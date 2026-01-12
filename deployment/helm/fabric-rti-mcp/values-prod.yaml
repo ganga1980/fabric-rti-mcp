@@ -1,0 +1,109 @@
+# Production environment values for fabric-rti-mcp
+
+environment: "production"
+
+# Higher replicas for production
+replicaCount: 3
+
+image:
+  repository: your-acr.azurecr.io/fabric-rti-mcp
+  tag: "v0.2.0"  # Use specific version tags in production
+  pullPolicy: IfNotPresent
+
+# Full resources for production
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "2000m"
+
+# Production HPA settings
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Production PDB - require more pods available
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Production ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: fabric-rti-mcp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: fabric-rti-mcp-tls
+      hosts:
+        - fabric-rti-mcp.example.com
+
+# Production authentication - workload identity with OBO
+config:
+  auth:
+    method: "workloadIdentity"
+    useOboFlow: true
+  transport:
+    stateless: true
+
+# Workload identity for production
+workloadIdentity:
+  enabled: true
+  labelPods: true
+  # clientId: "prod-umi-client-id"
+
+serviceAccount:
+  create: true
+  annotations:
+    # azure.workload.identity/client-id: "prod-umi-client-id"
+
+# OBO secrets for production
+secrets:
+  create: true
+  obo:
+    # tenantId: "prod-tenant-id"
+    # entraAppClientId: "prod-entra-app-client-id"
+    # userManagedIdentityClientId: "prod-umi-client-id"
+    # kustoAudience: "https://kusto.kusto.windows.net"
+
+# Production-grade affinity rules
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: workload
+          operator: In
+          values:
+          - production
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - fabric-rti-mcp
+        topologyKey: kubernetes.io/hostname

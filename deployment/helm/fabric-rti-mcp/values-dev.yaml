@@ -1,0 +1,62 @@
+# Development environment values for fabric-rti-mcp
+
+environment: "dev"
+
+# Reduced replicas for dev
+replicaCount: 1
+
+image:
+  repository: your-acr.azurecr.io/fabric-rti-mcp
+  tag: "dev-latest"
+  pullPolicy: Always
+
+# Reduced resources for dev
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# Dev HPA settings
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Dev ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: fabric-rti-mcp-dev.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: fabric-rti-mcp-tls
+      hosts:
+        - fabric-rti-mcp-dev.example.com
+
+# Development authentication - no OBO flow
+config:
+  auth:
+    method: "servicePrincipal"
+    useOboFlow: false
+  transport:
+    stateless: true
+
+# Service principal auth for dev
+secrets:
+  create: true
+  servicePrincipal:
+    # clientId: "dev-client-id"
+    # clientSecret: "dev-client-secret"
+    # tenantId: "dev-tenant-id"
+
+# No workload identity in dev
+workloadIdentity:
+  enabled: false

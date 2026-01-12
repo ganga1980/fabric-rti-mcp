@@ -1,0 +1,70 @@
+# Staging environment values for fabric-rti-mcp
+
+environment: "staging"
+
+# Moderate replicas for staging
+replicaCount: 2
+
+image:
+  repository: your-acr.azurecr.io/fabric-rti-mcp
+  tag: "staging-latest"
+  pullPolicy: Always
+
+# Moderate resources for staging
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "768Mi"
+    cpu: "750m"
+
+# Staging HPA settings
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Staging ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: fabric-rti-mcp-staging.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: fabric-rti-mcp-tls
+      hosts:
+        - fabric-rti-mcp-staging.example.com
+
+# Staging authentication - OBO flow enabled
+config:
+  auth:
+    method: "workloadIdentity"
+    useOboFlow: true
+  transport:
+    stateless: true
+
+# Workload identity for staging
+workloadIdentity:
+  enabled: true
+  labelPods: true
+  # clientId: "staging-umi-client-id"
+
+serviceAccount:
+  create: true
+  annotations:
+    # azure.workload.identity/client-id: "staging-umi-client-id"
+
+# OBO secrets for staging
+secrets:
+  create: true
+  obo:
+    # tenantId: "staging-tenant-id"
+    # entraAppClientId: "staging-entra-app-client-id"
+    # userManagedIdentityClientId: "staging-umi-client-id"
+    # kustoAudience: "https://kusto.kusto.windows.net"

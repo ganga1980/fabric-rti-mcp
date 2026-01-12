@@ -1,0 +1,59 @@
+{{- $fullName := include "fabric-rti-mcp.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ $fullName }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ $fullName }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ $fullName }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ $svcPort }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "fabric-rti-mcp.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Check the status of the deployment:
+  kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "fabric-rti-mcp.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. View logs:
+  kubectl logs -f --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "fabric-rti-mcp.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+{{- if .Values.workloadIdentity.enabled }}
+
+4. Workload Identity Configuration:
+   - Ensure your User-Assigned Managed Identity is properly configured
+   - Federated credential should be set up for the service account: {{ include "fabric-rti-mcp.serviceAccountName" . }}
+   - Namespace: {{ .Release.Namespace }}
+   - Client ID: {{ .Values.workloadIdentity.clientId }}
+{{- end }}
+
+{{- if eq .Values.config.auth.method "servicePrincipal" }}
+
+5. Service Principal Authentication:
+   - Ensure AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID are set in the secret
+   - Update the secret with: kubectl create secret generic {{ include "fabric-rti-mcp.secretName" . }} --from-literal=AZURE_CLIENT_ID=<id> --from-literal=AZURE_CLIENT_SECRET=<secret> --from-literal=AZURE_TENANT_ID=<tenant> --dry-run=client -o yaml | kubectl apply -f -
+{{- end }}
+
+{{- if eq .Values.config.auth.method "obo" }}
+
+6. OBO Flow Configuration:
+   - Ensure all required OBO environment variables are set in the secret
+   - Required: FABRIC_RTI_MCP_AZURE_TENANT_ID, FABRIC_RTI_MCP_ENTRA_APP_CLIENT_ID
+   - Optional: FABRIC_RTI_MCP_USER_MANAGED_IDENTITY_CLIENT_ID, FABRIC_RTI_MCP_KUSTO_AUDIENCE
+{{- end }}
+
+Environment: {{ .Values.environment }}
+Authentication Method: {{ .Values.config.auth.method }}
+
+For more information, visit: https://github.com/your-org/fabric-rti-mcp
