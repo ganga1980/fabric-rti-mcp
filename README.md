@@ -203,67 +203,98 @@ The process should end with the below settings in your `settings.json` or your `
 
 ## 🚢 Deploy to Azure Kubernetes Service (AKS)
 
-The Fabric RTI MCP Server can be deployed to Azure Kubernetes Service for production workloads with enterprise-grade features:
+The Fabric RTI MCP Server can be deployed to Azure Kubernetes Service using **Helm charts** for production workloads with enterprise-grade features:
 
-- **🔐 Multiple Auth Methods**: Workload Identity (recommended) or Service Principal
+- **🎯 Easy Configuration**: Single values file per environment with runtime overrides
+- **🔐 Multiple Auth Methods**: Workload Identity (recommended), Service Principal, or OBO Flow
 - **📈 Auto-scaling**: Horizontal Pod Autoscaler with CPU/memory metrics
 - **🛡️ Security**: Non-root containers, security contexts, network policies
 - **🔄 High Availability**: Multi-replica deployments with pod disruption budgets
 - **📊 Monitoring**: Health checks, readiness/liveness probes, Prometheus integration
 - **🌐 Ingress**: NGINX or Azure Application Gateway with TLS support
+- **🔁 Built-in Rollback**: One-command rollback to previous versions
 
 ### Quick Start (5 minutes)
 
 ```bash
-# 1. Set environment variables
-export ACR_NAME="your-acr-name"
-export RESOURCE_GROUP="fabric-rti-mcp-rg"
-export AKS_CLUSTER_NAME="fabric-rti-mcp-aks"
-export LOCATION="westus2"
-export MANAGED_IDENTITY_NAME="fabric-rti-mcp-uai"
-export NAMESPACE="fabric-rti-mcp"
-export SERVICE_ACCOUNT_NAME="fabric-rti-mcp-sa"
-
-# 2. Build and push image
+# 1. Build and push your container image
+export IMAGE_REGISTRY="your-acr.azurecr.io"
+export IMAGE_TAG="v0.2.0"
 ./deployment/scripts/build-and-push.sh
 
-# 3. Setup workload identity (recommended auth method)
+# 2. Setup workload identity (recommended for production)
 ./deployment/scripts/setup-workload-identity.sh
 
-# 4. Deploy to development
-kubectl apply -k deployment/kubernetes/overlays/dev
+# 3. Deploy to development environment
+helm install fabric-rti-mcp ./deployment/helm/fabric-rti-mcp \
+  --namespace fabric-rti-mcp-dev \
+  --create-namespace \
+  --values ./deployment/helm/fabric-rti-mcp/values-dev.yaml \
+  --set image.repository=${IMAGE_REGISTRY}/fabric-rti-mcp \
+  --set image.tag=${IMAGE_TAG}
+
+# 4. Deploy to production with workload identity
+helm install fabric-rti-mcp ./deployment/helm/fabric-rti-mcp \
+  --namespace fabric-rti-mcp-prod \
+  --create-namespace \
+  --values ./deployment/helm/fabric-rti-mcp/values-prod.yaml \
+  --set image.repository=${IMAGE_REGISTRY}/fabric-rti-mcp \
+  --set image.tag=${IMAGE_TAG} \
+  --set workloadIdentity.clientId=YOUR_UMI_CLIENT_ID
 ```
 
-### Documentation
+### Helm Chart Documentation
 
-- **[📘 Full Deployment Guide](deployment/README.md)** - Comprehensive AKS deployment documentation
-- **[⚡ Quick Start Guide](deployment/QUICKSTART.md)** - Get started in 5 minutes
-- **[🔧 CI/CD Setup](deployment/CICD.md)** - GitHub Actions workflow configuration
-- **[📁 Structure](deployment/STRUCTURE.md)** - Deployment directory overview
+- **[📘 Complete Helm Guide](deployment/helm/README.md)** - Full documentation with all configuration options
+- **[⚡ Quick Start Guide](deployment/helm/QUICKSTART.md)** - Get started in 5 minutes
+- **[📋 Index & Navigation](deployment/helm/INDEX.md)** - Comprehensive guide navigation
+- **[🔧 CI/CD Example](deployment/helm/.github-workflow-example.yaml)** - GitHub Actions workflow
+- **[📘 General Deployment Guide](deployment/README.md)** - Overview and prerequisites
+
+### Environment-Specific Values
+
+Three pre-configured Helm value files for different environments:
+
+- **Development** (`values-dev.yaml`): 1 replica, 512Mi limit, Service Principal auth
+- **Staging** (`values-staging.yaml`): 2 replicas, 768Mi limit, Workload Identity
+- **Production** (`values-prod.yaml`): 3 replicas, 2Gi limit, HA setup with auto-scaling up to 20 pods
 
 ### Supported Auth Methods
 
-| Method | Security | Complexity | Status |
-|--------|----------|------------|--------|
-| **Workload Identity** | ⭐⭐⭐⭐⭐ | Medium | ✅ Recommended |
-| **Service Principal** | ⭐⭐⭐ | Low | ✅ Supported |
+Configure authentication by setting `config.auth.method` in your values file:
 
-### Environment Overlays
+| Method | Security | Best For | Configuration |
+|--------|----------|----------|---------------|
+| **Workload Identity** | ⭐⭐⭐⭐⭐ | Production/Staging | `method: "workloadIdentity"` |
+| **Service Principal** | ⭐⭐⭐ | Development | `method: "servicePrincipal"` |
+| **OBO Flow** | ⭐⭐⭐⭐ | Gateway scenarios | `method: "obo"` |
 
-Three pre-configured environments using Kustomize:
+### Common Operations
 
-- **Development**: 1 replica, lower resources, local testing
-- **Staging**: 2 replicas, workload identity enabled, pre-production validation
-- **Production**: 3+ replicas (auto-scaling), high availability, full monitoring
+```bash
+# Upgrade to new version
+helm upgrade fabric-rti-mcp ./deployment/helm/fabric-rti-mcp \
+  --reuse-values --set image.tag=v0.2.1
+
+# Rollback to previous version
+helm rollback fabric-rti-mcp
+
+# Check deployment status
+helm status fabric-rti-mcp -n fabric-rti-mcp-prod
+
+# View release history
+helm history fabric-rti-mcp -n fabric-rti-mcp-prod
+```
 
 ### Prerequisites
 
 - Azure subscription with AKS cluster
 - Azure Container Registry (ACR)
-- kubectl and Azure CLI installed
+- Helm 3.2.0+ and kubectl installed
+- Azure CLI for authentication setup
 - Docker (for building images)
 
-For detailed instructions, see the [deployment README](deployment/README.md).
+For detailed instructions, see the [Helm chart documentation](deployment/helm/README.md).
 ```
 
 ## 🐛 Debugging the MCP Server locally
